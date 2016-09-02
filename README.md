@@ -15,3 +15,6 @@ thed <file> [<options> ...]
 
 For a full list of features:
 thed -?
+
+Known issues:
+Sometimes it may displace the prompt in the Linux terminal.
