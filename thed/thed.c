@@ -5,7 +5,8 @@
  * process and create binaries from both hex and csv dumps. When generating a binary from a hex dump, 
  * thed reads only the hex. Any changes in the strings section has no effect. 
  * thed can also search for and replace ASCII, Unicode and byte sequences.
- * Number base conversion, bitwise operations, and the ASCII table are added for convenience. */
+ * Number base conversion, bitwise operations, and the ASCII table are added for convenience. 
+ * Compiled with: gcc thed.c -o thed.exe -Wall -s -m32 */
 
 #include "thed.h"
 
