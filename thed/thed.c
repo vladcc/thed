@@ -497,11 +497,10 @@ void hex_dump(const char * fname, long line_num)
 		for (i = 1, j = 0; j < n; ++i, ++j)	// prepare the string section
 			ln.chstr[i] = !iscntrl(buff[j]) ? buff[j] : '.';
 			
-		ln.chstr[i++] = '\n';
 		ln.chstr[i] = '\0';
 		
 		// print the whole thing
-		fprintf(stdout, "%-*s%-*s", MAX*3, ln.hxstr, MAX, ln.chstr); 
+		fprintf(stdout, "%-*s%-*s\n", MAX*3, ln.hxstr, MAX, ln.chstr); 
 		++lines_done;
 	}
 	
