@@ -9,7 +9,7 @@
 // constants
 #define MAX 16
 #define MAGIC 10
-#define CSV_LN_LEN MAX * 5 + 2
+#define CSV_LN_LEN (MAX * 5 + 2)
 #define BIN 'b'
 #define CSV 'c'
 #define OFFSET 'o'
@@ -67,7 +67,7 @@ const char * NON_PRINT_ASCII[] =	{
 const char OFFSET_TBL[] = " 00 01 02 03 04 05 06 07 08 09 0A 0B 0C 0D 0E 0F";									
 const char HEXTBL[] = "0123456789ABCDEF";
 const char ORIG_EXE_NAME[] = "thed";
-const char EXE_VER[] = "1.0";
+const char EXE_VER[] = "1.01";
 const char DASH = '-';
 const char END = '_';
 const char SPRT = '|';

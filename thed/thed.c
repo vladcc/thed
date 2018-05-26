@@ -6,7 +6,7 @@
  * thed reads only the hex. Any changes in the strings section has no effect. 
  * thed can also search for and replace ASCII, Unicode and byte sequences.
  * Number base conversion, bitwise operations, and the ASCII table are added for convenience. 
- * Compiled with: gcc thed.c -o thed.exe -Wall -s -m32 */
+ * Compiled with: gcc thed.c -o thed.exe -Wall -s -O2 -m32 */
 
 #include "thed.h"
 
@@ -239,16 +239,14 @@ int check_args(int argc, char * argv[])
 				if (LEN == argv[1][2])
 				{
 					if (2 < argc)
-					{
 						opt = OPT_STR_LEN;
-						break;
-					}
 					else
 					{
 						fprintf(stderr, "Err: no string.\n");
 						exit(1);
 					}
 				}
+				break;
 			default:
 				opt = BAD_OPT;
 				break;
@@ -296,28 +294,33 @@ void csv_dump_to_bin(const char * fin, const char * fout)
 	fpin = open_file(fin, "r");		// open input file for character read
 	fpout = open_file(fout, "wb");	// open output file for binary write
 	
-	while (fgets(csv_line, CSV_LN_LEN, fpin) != NULL && END != csv_line[0])
+	while (fgets(csv_line, CSV_LN_LEN, fpin) != NULL)
 	{
-		int i, j;
-		for (i = 2, j = 0; j < MAX; i += 5, ++j) 
+		int digit, bytes, pos;
+		const int step = 5;
+		for (pos = 0, bytes = 0; bytes < MAX; pos += step, ++bytes) 
 		{
-			// calculate digital values from characters
-			if ('0' <= csv_line[i] && '9' >= csv_line[i])
-				buff[j] = csv_line[i] - '0';
-				
-			else if ('A' <= csv_line[i] && 'F' >= csv_line[i])
-				buff[j] = csv_line[i] - 'A' + MAGIC;
-				
-			buff[j] <<= 4; // shift four bytes to make space for lower nibble
+			int tmp_ch = (csv_line[pos] == '\n') ? csv_line[pos+1] : csv_line[pos];
+			if ('\0' == tmp_ch || END == tmp_ch)
+				break;
 			
-			if ('0' <= csv_line[i + 1] && '9' >= csv_line[i + 1])
-				buff[j] += csv_line[i + 1] - '0';
+			// calculate digit values from characters
+			digit = pos + 2;
+			if ('0' <= csv_line[digit] && '9' >= csv_line[digit])
+				buff[bytes] = csv_line[digit] - '0';
+			else if ('A' <= csv_line[digit] && 'F' >= csv_line[digit])
+				buff[bytes] = csv_line[digit] - 'A' + MAGIC;
 				
-			else if ('A' <= csv_line[i + 1] && 'F' >= csv_line[i + 1])
-				buff[j] += csv_line[i + 1] - 'A' + MAGIC;
+			buff[bytes] <<= 4; // shift four to make space for lower nibble
+			
+			++digit;
+			if ('0' <= csv_line[digit] && '9' >= csv_line[digit])
+				buff[bytes] |= csv_line[digit] - '0';
+			else if ('A' <= csv_line[digit] && 'F' >= csv_line[digit])
+				buff[bytes] |= csv_line[digit] - 'A' + MAGIC;
 		}
 		
-		if (fwrite(buff, sizeof(byte), MAX, fpout) != MAX) // write to output file
+		if (fwrite(buff, sizeof(byte), bytes, fpout) != bytes) // write to output file
 		{
 			fprintf(stderr, "Err: write error. Writing to %s has failed.\n", fout);
 			fclose(fpin);
@@ -346,26 +349,31 @@ void hex_dump_to_bin(const char * fin, const char * fout)
 	
 	while (fgets(ln.hxstr, ln_hex_len, fpin) != NULL && END != ln.hxstr[0])
 	{
-		int i, j;
-		for (i = 1, j = 0; j < MAX; i += 3, ++j) 
+		int digit, bytes, pos;
+		const int step = 3;
+		for (pos = 0, bytes = 0; bytes < MAX; pos += step, ++bytes) 
 		{
+			int tmp_ch = ln.hxstr[pos+1];
+			if (END == tmp_ch || pos >= ln_hex_len-1)
+				break;
+				
 			// calculate digital values from characters
-			if ('0' <= ln.hxstr[i] && '9' >= ln.hxstr[i])
-				buff[j] = ln.hxstr[i] - '0';
+			digit = pos + 1;
+			if ('0' <= ln.hxstr[digit] && '9' >= ln.hxstr[digit])
+				buff[bytes] = ln.hxstr[digit] - '0';
+			else if ('A' <= ln.hxstr[digit] && 'F' >= ln.hxstr[digit])
+				buff[bytes] = ln.hxstr[digit] - 'A' + MAGIC;
 				
-			else if ('A' <= ln.hxstr[i] && 'F' >= ln.hxstr[i])
-				buff[j] = ln.hxstr[i] - 'A' + MAGIC;
-				
-			buff[j] <<= 4; // shift four bytes to make space for lower nibble
-				
-			if ('0' <= ln.hxstr[i + 1] && '9' >= ln.hxstr[i + 1])
-				buff[j] += ln.hxstr[i + 1] - '0';
-				
-			else if ('A' <= ln.hxstr[i + 1] && 'F' >= ln.hxstr[i + 1])
-				buff[j] += ln.hxstr[i + 1] - 'A' + MAGIC;
+			buff[bytes] <<= 4; // shift four bytes to make space for lower nibble
+			
+			++digit;	
+			if ('0' <= ln.hxstr[digit] && '9' >= ln.hxstr[digit])
+				buff[bytes] += ln.hxstr[digit] - '0';
+			else if ('A' <= ln.hxstr[digit] && 'F' >= ln.hxstr[digit])
+				buff[bytes] += ln.hxstr[digit] - 'A' + MAGIC;
 		}
 		
-		if (fwrite(buff, sizeof(byte), MAX, fpout) != MAX) // write to output file
+		if (fwrite(buff, sizeof(byte), bytes, fpout) != bytes) // write to output file
 		{
 			fprintf(stderr, "Err: write error. Writing to %s has failed.", fout);
 			fclose(fpin);
@@ -412,6 +420,13 @@ void csv_dump(const char * fin, const char * fout)
 		
 		fprintf(fpout, "%s", csv_line); // write to output file
 	}
+	
+	if (ferror(fpin))
+	{
+		fprintf(stderr, "Err: read error.\n");
+		exit(1);
+	}
+	
 	// mark end of dump
 	putc(END, fpout);
 	putc(END, fpout);
@@ -504,6 +519,12 @@ void hex_dump(const char * fname, long line_num)
 		++lines_done;
 	}
 	
+	if (ferror(fp))
+	{
+		fprintf(stderr, "Err: read error.\n");
+		exit(1);
+	}
+	
 		// print ending characters if n was never < MAX
 		if (!is_n_eof)
 			fprintf(stdout, "%c%c\n", END, END);
@@ -562,7 +583,13 @@ void search(const char mode, const char * fname, const char * sequence)
 			
 			// read a string as long as the search sequence
 			// NOTE: no '\0' character is read
-			fread(buff, sizeof(char), srch_seq_len, fp);
+			if (fread(buff, sizeof(char), srch_seq_len, fp) != srch_seq_len)
+			{
+				if (feof(fp))
+					goto matches_and_go;
+				else
+					fprintf(stderr, "Err: read error.\n");
+			}
 			
 			// compare the strings
 			int i, j;
@@ -597,6 +624,14 @@ void search(const char mode, const char * fname, const char * sequence)
 			fseek(fp, saved_match_pos + 1L, SEEK_SET);
 		}
 	}
+	
+	if (ferror(fp))
+	{
+		fprintf(stderr, "Err: read error.\n");
+		exit(1);
+	}
+	
+	matches_and_go:
 		// print number of matches found
 		fprintf(stdout, "%u %s found.\n", matches_found, (matches_found != 1) ? "matches" : "match");
 		
@@ -639,7 +674,7 @@ void replace(const char mode, const char * fname, const char * sequence)
 	
 	if (fwrite(sequence, sizeof(char), buff_len, fp) < buff_len )
 	{
-		fprintf(stderr, "Err: writing error.\n");
+		fprintf(stderr, "Err: write error.\n");
 		fclose(fp);
 		exit(1);
 	}
@@ -728,7 +763,6 @@ byte * hexstr_to_bytes(const char * str, int * out_buff_size)
 		// same code as in hex_dump_to_bin
 		if ('0' <= str_hex[i] && '9' >= str_hex[i])
 			byte_buff[k] = str_hex[i] - '0';
-			
 		else if ('A' <= str_hex[i] && 'F' >= str_hex[i])
 			byte_buff[k] = str_hex[i] - 'A' + MAGIC;
 			
@@ -736,7 +770,6 @@ byte * hexstr_to_bytes(const char * str, int * out_buff_size)
 			
 		if ('0' <= str_hex[i + 1] && '9' >= str_hex[i + 1])
 			byte_buff[k] += str_hex[i + 1] - '0';
-			
 		else if ('A' <= str_hex[i + 1] && 'F' >= str_hex[i + 1])
 			byte_buff[k] += str_hex[i + 1] - 'A' + MAGIC;
 	}
@@ -769,8 +802,7 @@ void print_conv_nums(const char * str, int from_base, int to_base)
 			continue;
 		
 		if ('0' <= j && '9' >= j)
-				j -= '0';
-			
+			j -= '0';
 		else if ('A' <= j && 'F' >= j)
 			j = (j - 'A') + MAGIC;
 			
@@ -833,7 +865,6 @@ void print_file_info(const char * fname)
 	fseek(fp, 0, SEEK_END);
 	file_end = ftell(fp);
 	
-	fprintf(stdout, "Size of %s:\n\n", fname);
 	fprintf(stdout, "%-6s %.2f\n%-6s %.2f\n%-6s %ld\n", "MB:", (float)file_end / 1024.0 / 1024.0, "KB:", (float)file_end / 1024.0,
 	"Bytes:", file_end);
 	fprintf(stdout, "Last byte offset: %#lx\n", file_end - 1);
