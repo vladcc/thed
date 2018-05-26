@@ -1,19 +1,17 @@
 /* thed.c -- terminal hex editor
  * thed is a console tool for dumping, looking through, and editing the binary values of a file.
  * thed can dump files either in a standard hex view format with values on the left and their
- * string represantation on the right, or as comma separated values. thed can also reverse this
+ * string representation on the right, or as comma separated values. thed can also reverse this
  * process and create binaries from both hex and csv dumps. When generating a binary from a hex dump, 
  * thed reads only the hex. Any changes in the strings section has no effect. 
  * thed can also search for and replace ASCII, Unicode and byte sequences.
  * Number base conversion, bitwise operations, and the ASCII table are added for convenience. 
- * Compiled with: gcc thed.c -o thed.exe -Wall -s -O2 -m32 */
+ * Compiled with: gcc thed.c -o thed -Wall -s -O2 -m32 */
 
 #include "thed.h"
 
-// code
 int main(int argc, char * argv[])
 {	
-	// main() is used only for dispatching
 	switch (check_args(argc, argv))
 	{
 		case OPT_DUMP:
@@ -72,18 +70,18 @@ int main(int argc, char * argv[])
 
 int check_args(int argc, char * argv[])
 {
-	/* here arguments are parsed and the results
+	/* arguments are parsed and the results
 	 * gets returned to main() */
 	
 	if (argc < 2)
 		return BAD_OPT;
 	
-	int opt = OPT_DUMP; // assume by deafult
+	int opt = OPT_DUMP; // default
 	
 	// assume argv[1] is the input file
 	input_file = argv[1];
 	
-	int i; // look for -o, -l, -s, -r and -i
+	int i; // look for -o, -l, -s, -r, -i
 	for (i = 2; i < argc; ++i) 
 	{
 		if (DASH == argv[i][0])
@@ -161,7 +159,7 @@ int check_args(int argc, char * argv[])
 		}	
 	} 
 	
-	// parse for thed -(opt)
+	// base conversion
 	if (DASH == argv[1][0])
 	{
 		// parse for number base conversion
@@ -291,12 +289,12 @@ void csv_dump_to_bin(const char * fin, const char * fout)
 	byte buff[MAX];
 	char csv_line[CSV_LN_LEN];
 	
-	fpin = open_file(fin, "r");		// open input file for character read
-	fpout = open_file(fout, "wb");	// open output file for binary write
+	fpin = open_file(fin, "r");
+	fpout = open_file(fout, "wb");	
 	
 	while (fgets(csv_line, CSV_LN_LEN, fpin) != NULL)
 	{
-		int digit, bytes, pos;
+		int bytes, pos;
 		const int step = 5;
 		for (pos = 0, bytes = 0; bytes < MAX; pos += step, ++bytes) 
 		{
@@ -304,23 +302,10 @@ void csv_dump_to_bin(const char * fin, const char * fout)
 			if ('\0' == tmp_ch || END == tmp_ch)
 				break;
 			
-			// calculate digit values from characters
-			digit = pos + 2;
-			if ('0' <= csv_line[digit] && '9' >= csv_line[digit])
-				buff[bytes] = csv_line[digit] - '0';
-			else if ('A' <= csv_line[digit] && 'F' >= csv_line[digit])
-				buff[bytes] = csv_line[digit] - 'A' + MAGIC;
-				
-			buff[bytes] <<= 4; // shift four to make space for lower nibble
-			
-			++digit;
-			if ('0' <= csv_line[digit] && '9' >= csv_line[digit])
-				buff[bytes] |= csv_line[digit] - '0';
-			else if ('A' <= csv_line[digit] && 'F' >= csv_line[digit])
-				buff[bytes] |= csv_line[digit] - 'A' + MAGIC;
+			hex_chars_to_byte(&csv_line[pos + 2], &buff[bytes]);
 		}
 		
-		if (fwrite(buff, sizeof(byte), bytes, fpout) != bytes) // write to output file
+		if (fwrite(buff, sizeof(byte), bytes, fpout) != bytes)
 		{
 			fprintf(stderr, "Err: write error. Writing to %s has failed.\n", fout);
 			fclose(fpin);
@@ -344,12 +329,12 @@ void hex_dump_to_bin(const char * fin, const char * fout)
 	size_t ln_hex_len = sizeof(ln.hxstr) / sizeof(char);
 	size_t ln_char_len = sizeof(ln.chstr) / sizeof(char);
 	
-	fpin = open_file(fin, "r");		// open dump file for character read
-	fpout = open_file(fout, "wb");	// open output file for binary write
+	fpin = open_file(fin, "r");		
+	fpout = open_file(fout, "wb");	
 	
 	while (fgets(ln.hxstr, ln_hex_len, fpin) != NULL && END != ln.hxstr[0])
 	{
-		int digit, bytes, pos;
+		int bytes, pos;
 		const int step = 3;
 		for (pos = 0, bytes = 0; bytes < MAX; pos += step, ++bytes) 
 		{
@@ -357,23 +342,10 @@ void hex_dump_to_bin(const char * fin, const char * fout)
 			if (END == tmp_ch || pos >= ln_hex_len-1)
 				break;
 				
-			// calculate digital values from characters
-			digit = pos + 1;
-			if ('0' <= ln.hxstr[digit] && '9' >= ln.hxstr[digit])
-				buff[bytes] = ln.hxstr[digit] - '0';
-			else if ('A' <= ln.hxstr[digit] && 'F' >= ln.hxstr[digit])
-				buff[bytes] = ln.hxstr[digit] - 'A' + MAGIC;
-				
-			buff[bytes] <<= 4; // shift four bytes to make space for lower nibble
-			
-			++digit;	
-			if ('0' <= ln.hxstr[digit] && '9' >= ln.hxstr[digit])
-				buff[bytes] += ln.hxstr[digit] - '0';
-			else if ('A' <= ln.hxstr[digit] && 'F' >= ln.hxstr[digit])
-				buff[bytes] += ln.hxstr[digit] - 'A' + MAGIC;
+			hex_chars_to_byte(&ln.hxstr[pos + 1], &buff[bytes]);
 		}
 		
-		if (fwrite(buff, sizeof(byte), bytes, fpout) != bytes) // write to output file
+		if (fwrite(buff, sizeof(byte), bytes, fpout) != bytes)
 		{
 			fprintf(stderr, "Err: write error. Writing to %s has failed.", fout);
 			fclose(fpin);
@@ -400,8 +372,8 @@ void csv_dump(const char * fin, const char * fout)
 	char csv_line[CSV_LN_LEN];
 	int n;
 	
-	fpin = open_file(fin, "rb");	// open input file for binary read
-	fpout = open_file(fout, "w");	// open output file for character write
+	fpin = open_file(fin, "rb");	
+	fpout = open_file(fout, "w");	
 	
 	while ( (n = fread(buff, sizeof(byte), MAX, fpin)) > 0 )
 	{
@@ -418,7 +390,7 @@ void csv_dump(const char * fin, const char * fout)
 		csv_line[j++] = '\n';
 		csv_line[j] = '\0';
 		
-		fprintf(fpout, "%s", csv_line); // write to output file
+		fprintf(fpout, "%s", csv_line);
 	}
 	
 	if (ferror(fpin))
@@ -431,7 +403,7 @@ void csv_dump(const char * fin, const char * fout)
 	putc(END, fpout);
 	putc(END, fpout);
 	
-	fprintf(stdout, "CSV written to %s.\n", output_file); // success
+	fprintf(stdout, "CSV written to %s.\n", output_file);
 	fclose(fpin);
 	fclose(fpout);
 }
@@ -447,7 +419,7 @@ void hex_dump(const char * fname, long line_num)
 	long lines_done = 0L;
 	bool is_n_eof = false;
 	
-	fp = open_file(fname, "rb"); // open for binary read
+	fp = open_file(fname, "rb");
 	
 	if (hex_dump_middle) // -lm
 	{
@@ -471,7 +443,7 @@ void hex_dump(const char * fname, long line_num)
 	}
 	
 	// print offset table and first byte offset to stderr
-	// so it won't get in the file if redirection is used
+	// so it won't get in the file if stdout is redirected
 	fprintf(stderr, " First byte offset: %#lx\n", offset);
 	fprintf(stderr, "%s\n\n", OFFSET_TBL);
 
@@ -759,21 +731,8 @@ byte * hexstr_to_bytes(const char * str, int * out_buff_size)
 	
 	// convert hex characters to binary values
 	for (i = 0, k = 0; i < j; i += 2, ++k) 
-	{
-		// same code as in hex_dump_to_bin
-		if ('0' <= str_hex[i] && '9' >= str_hex[i])
-			byte_buff[k] = str_hex[i] - '0';
-		else if ('A' <= str_hex[i] && 'F' >= str_hex[i])
-			byte_buff[k] = str_hex[i] - 'A' + MAGIC;
-			
-		byte_buff[k] <<= 4; // shift four bytes to make space for lower nibble
-			
-		if ('0' <= str_hex[i + 1] && '9' >= str_hex[i + 1])
-			byte_buff[k] += str_hex[i + 1] - '0';
-		else if ('A' <= str_hex[i + 1] && 'F' >= str_hex[i + 1])
-			byte_buff[k] += str_hex[i + 1] - 'A' + MAGIC;
-	}
-	
+		hex_chars_to_byte(&str_hex[i], &byte_buff[k]);
+
 	*out_buff_size = k; // save buffer size
 
 	return byte_buff;
@@ -905,7 +864,7 @@ void and_or_xor(char opt, const char * num1, const char * num2)
 	
 	if (NOT == opt)
 	{
-		not(num1);
+		bit_not(num1);
 		return;
 	}
 	
@@ -1042,7 +1001,7 @@ void and_or_xor(char opt, const char * num1, const char * num2)
 	putchar('\n');
 }
 
-void not(const char * num)
+void bit_not(const char * num)
 {
 	/* NOTing is implemented as XORing with the needed number
 	 * of 0xFs in order to not always print a 32 bit number, which

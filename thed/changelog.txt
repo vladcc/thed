@@ -1,0 +1,14 @@
+2018-05-26
+thed ver. 1.01
+
+Added:
+hex_chars_to_byte() macro
+./test_files + the test files
+I/O test scripts
+Compile script
+This file
+
+Bug fixes:
+Linux terminal displacement
+CSV to binary; buffer was assumed to always be exactly full
+Hex dump do binary; buffer was assumed to always be exactly full

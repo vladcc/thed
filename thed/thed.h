@@ -1,4 +1,3 @@
-// includes
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -6,7 +5,6 @@
 #include <string.h>
 #include <stdbool.h>
 
-// constants
 #define MAX 16
 #define MAGIC 10
 #define CSV_LN_LEN (MAX * 5 + 2)
@@ -49,6 +47,23 @@
 #define OPT_VER 14
 #define BAD_OPT -1
 
+#define hex_chars_to_byte(chars_ptr, out_byte_ptr)\
+do{\
+	byte btmp = 0;\
+	char chtmp = *(chars_ptr);\
+	if ('0' <= chtmp && '9' >= chtmp)\
+		btmp |= chtmp - '0';\
+	else if ('A' <= chtmp && 'F' >= chtmp)\
+		btmp |= chtmp - 'A' + MAGIC;\
+	btmp <<= 4;\
+	chtmp = *((chars_ptr) + 1);\
+	if ('0' <= chtmp && '9' >= chtmp)\
+		btmp |= chtmp - '0';\
+	else if ('A' <= chtmp && 'F' >= chtmp)\
+		btmp |= chtmp - 'A' + MAGIC;\
+	*(out_byte_ptr) = btmp;\
+} while(0)
+
 const char * BINTBL[] = {
 	"0000 ", "0001 ", "0010 ", "0011 ",
 	"0100 ", "0101 ", "0110 ", "0111 ",
@@ -72,7 +87,7 @@ const char DASH = '-';
 const char END = '_';
 const char SPRT = '|';
 
-// used for argument transfer
+// globals for program arguments
 static const char * input_file = NULL;
 static const char * output_file = NULL;
 static const char * search_rep_seq = NULL;
@@ -86,35 +101,32 @@ bool replace_everything = false;
 bool negative_line = false;
 bool hex_dump_middle = false;
 
-//typedefs and structs
-typedef uint8_t byte; // this will be our byte type
+typedef uint8_t byte;
 
-// the LINE struct acts as a char buffer for a whole hex view line
+// the LINE struct acts as a char buffer for a one hex view line
 struct LINE
 {
 	char hxstr[MAX * 3 + 1];
 	char chstr[MAX + 3];
 };
-
 typedef struct LINE LINE;
 
-// functions
-int check_args(int argc, char * argv[]);	// argument parsing
-FILE * open_file(const char * fname, const char * accs);	// all files are opened through here
+int check_args(int argc, char * argv[]);
+FILE * open_file(const char * fname, const char * accs);
 void hex_dump(const char * fname, long line_num);
 void csv_dump(const char * fin, const char * fout);
 void hex_dump_to_bin(const char * fin, const char * fout);
 void csv_dump_to_bin(const char * fin, const char * fout);
 void search(const char mode, const char * fname, const char * sequence);
 void replace(const char mode, const char * fname, const char * sequence);
-void print_conv_nums(const char * str, int from_base, int to_base);	// number base conversion
-void base_convert(unsigned long long num, int base);	// works with the above
+void print_conv_nums(const char * str, int from_base, int to_base);
+void base_convert(unsigned long long num, int base);
 void print_ascii(const char * str, bool whole_table, bool reverse);
-byte * hexstr_to_bytes(const char * str, int * out_buff_size);	// converts a hex string to bytes
-char * astr_to_ucstr(const char * str, int * out_buff_size);	// converts an ASCII string to Unicode
+byte * hexstr_to_bytes(const char * str, int * out_buff_size);
+char * astr_to_ucstr(const char * str, int * out_buff_size);
 void print_file_info(const char * fname);
 void and_or_xor(char opt, const char * num1, const char * num2);
-void not(const char * num);
+void bit_not(const char * num);
 void check_hex_str(const char * num);
 void print_strlen(const char * str);
 void print_help(const char * exe_name);
